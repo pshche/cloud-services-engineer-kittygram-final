@@ -35,11 +35,11 @@ jobs:
 
       - name: Django check
         env:
-          SECRET_KEY: test-secret-key
+          SECRET_KEY: ${{ secrets.TEST_SECRET_KEY }}
           DEBUG: "False"
-          POSTGRES_DB: kittygram
-          POSTGRES_USER: kittygram_user
-          POSTGRES_PASSWORD: kittygram_password
+          POSTGRES_DB: ${{ secrets.TEST_POSTGRES_DB }}
+          POSTGRES_USER: ${{ secrets.TEST_POSTGRES_USER }}
+          POSTGRES_PASSWORD: ${{ secrets.TEST_POSTGRES_PASSWORD }}
           DB_HOST: localhost
           DB_PORT: 5432
         run: |
@@ -175,13 +175,25 @@ jobs:
     name: telegram-notify
     needs: auto_tests
     runs-on: ubuntu-latest
+    if: always()
 
     steps:
-      - name: Send Telegram message
+      - name: Send Telegram message on success
+        if: success()
         env:
           TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
         run: |
           curl -s -X POST "https://api.telegram.org/bot${TELEGRAM_TOKEN}/sendMessage" \
             -H "Content-Type: application/json" \
-            -d "{\"chat_id\":\"${TELEGRAM_CHAT_ID}\",\"text\":\"Kittygram: deploy completed successfully\"}"
+            -d "{\"chat_id\":\"${TELEGRAM_CHAT_ID}\",\"text\":\"✅ Kittygram: deploy completed successfully\"}"
+
+      - name: Send Telegram message on failure
+        if: failure()
+        env:
+          TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: |
+          curl -s -X POST "https://api.telegram.org/bot${TELEGRAM_TOKEN}/sendMessage" \
+            -H "Content-Type: application/json" \
+            -d "{\"chat_id\":\"${TELEGRAM_CHAT_ID}\",\"text\":\"❌ Kittygram: deploy failed! Check GitHub Actions logs!\"}"

@@ -13,8 +13,8 @@ backend/env/
 **/env/
 
 # Migrations
-backend/*/migrations/
-**/migrations/0*.py
+#backend/*/migrations/
+#**/migrations/0*.py
 
 # Environment variables
 .env

@@ -50,7 +50,7 @@ services:
       - static:/static
     command: >
       sh -c "
-        cp -r /app/build/* /static/ 2>/dev/null || true
+        cp -r /static/* /static/ 2>/dev/null || true
         tail -f /dev/null
       "
     restart: always

@@ -1,0 +1,74 @@
+services:
+  postgres:
+    image: postgres:13
+    container_name: postgres
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: always
+
+  backend:
+    image: ${DOCKER_USERNAME}/kittygram_backend:latest
+    container_name: backend
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      DB_HOST: ${DB_HOST}
+      DB_PORT: ${DB_PORT}
+      SECRET_KEY: ${SECRET_KEY}
+      DEBUG: ${DEBUG}
+      ALLOWED_HOSTS: ${ALLOWED_HOSTS}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - static:/app/collected_static
+      - media:/app/media
+    command: >
+      sh -c "
+        echo 'Waiting for postgres...' &&
+        sleep 5 &&
+        python manage.py migrate &&
+        python manage.py collectstatic --noinput &&
+        gunicorn --bind 0.0.0.0:8000 kittygram_backend.wsgi:application
+      "
+    restart: always
+
+  frontend:
+    image: ${DOCKER_USERNAME}/kittygram_frontend:latest
+    container_name: frontend
+    volumes:
+      - static:/static
+    command: >
+      sh -c "
+        cp -r /app/build/* /static/ 2>/dev/null || true
+        tail -f /dev/null
+      "
+    restart: always
+
+  gateway:
+    image: ${DOCKER_USERNAME}/kittygram_gateway:latest
+    container_name: gateway
+    depends_on:
+      - backend
+      - frontend
+    ports:
+      - "9000:80"
+    volumes:
+      - static:/static
+      - media:/media
+    restart: always
+
+volumes:
+  pg_data:
+  static:
+  media:

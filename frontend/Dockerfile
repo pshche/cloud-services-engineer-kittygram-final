@@ -1,4 +1,4 @@
-FROM node:18 as build
+FROM node:18 AS build
 
 WORKDIR /app
 
@@ -8,18 +8,20 @@ RUN npm ci
 COPY . .
 RUN npm run build
 
-# Второй этап: используем nginx для отдачи статики
-FROM nginx:alpine
+# Второй этап: просто копируем файлы в volume
+FROM alpine:latest
 
-# Копируем собранные файлы из первого этапа
-COPY --from=build /app/build /usr/share/nginx/html
+# Создаём директорию для статики
+RUN mkdir -p /static
 
-# Если внутри build есть папка static, поднимаем её содержимое на уровень выше
-RUN if [ -d "/usr/share/nginx/html/static" ]; then \
-      cp -rf /usr/share/nginx/html/static/* /usr/share/nginx/html/ && \
-      rm -rf /usr/share/nginx/html/static; \
+# Копируем собранные файлы напрямую в /static
+COPY --from=build /app/build /static
+
+# Если внутри static есть папка static, поднимаем содержимое
+RUN if [ -d "/static/static" ]; then \
+      cp -rf /static/static/* /static/ && \
+      rm -rf /static/static; \
     fi
 
-EXPOSE 80
-
-CMD ["nginx", "-g", "daemon off;"]
+# Бесконечный цикл, чтобы контейнер не завершался
+CMD ["tail", "-f", "/dev/null"]

@@ -20,9 +20,6 @@ RUN pip install --no-cache-dir --upgrade pip && \
 # Копируем проект
 COPY . .
 
-# Собираем статику
-RUN python manage.py collectstatic --noinput
-
 # Открываем порт Gunicorn
 EXPOSE 8000
 
